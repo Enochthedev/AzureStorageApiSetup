@@ -16,7 +16,7 @@ public class AzureStorageService
         _logger = logger;
     }
 
-    public async Task<string> UploadFileAsync(Stream fileStream, string tenantId, string company, string category, string fileId, string contentType)
+    public async Task<(string category, string fileId)> UploadFileAsync(Stream fileStream, string tenantId, string company, string category, string fileId, string contentType)
     {
         try
         {
@@ -33,9 +33,9 @@ public class AzureStorageService
             }
 
             await blobClient.UploadAsync(fileStream, new BlobHttpHeaders { ContentType = contentType }).ConfigureAwait(false);
-            _logger.LogInformation("File uploaded successfully: {BlobPath}", blobPath);
+            _logger.LogInformation("File uploaded successfully: Category: {Category}, FileId: {FileId}", category, fileId);
 
-            return blobPath;
+            return (category, fileId);
         }
         catch (Exception ex)
         {
@@ -43,6 +43,7 @@ public class AzureStorageService
             throw;
         }
     }
+
 
     public async Task<Stream> DownloadFileAsync(string blobName)
     {
