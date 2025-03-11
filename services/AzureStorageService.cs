@@ -16,38 +16,35 @@ public class AzureStorageService
         _logger = logger;
     }
 
-    public async Task<(string category, string fileId)> UploadFileAsync(Stream fileStream, string tenantId, string company, string category, string fileId, string contentType)
+public async Task<(string fileUrl, string relativePath)> UploadFileAsync(Stream fileStream, string tenantId, string company, string category, string fileId, string contentType)
+{
+    try
     {
-        try
-        {
-            _logger.LogInformation("Starting file upload. Tenant: {TenantId}, Company: {Company}, Category: {Category}, FileId: {FileId}", tenantId, company, category, fileId);
+        _logger.LogInformation("Starting file upload. Tenant: {TenantId}, Company: {Company}, Category: {Category}, FileId: {FileId}", tenantId, company, category, fileId);
 
-            var blobContainerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-            await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None);
-            _logger.LogInformation("Blob container {ContainerName} checked/created.", _containerName);
+        var blobContainerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+        await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+        _logger.LogInformation("Blob container {ContainerName} checked/created.", _containerName);
 
-            string blobPath = $"{tenantId}/{company}/{category}/{fileId}";
-            _logger.LogInformation("Uploading file to Blob Path: {BlobPath}", blobPath);
+        string blobPath = $"{tenantId}/{company}/{category}/{fileId}";
+        _logger.LogInformation("Uploading file to Blob Path: {BlobPath}", blobPath);
 
-            var blobClient = blobContainerClient.GetBlobClient(blobPath);
+        var blobClient = blobContainerClient.GetBlobClient(blobPath);
+        await blobClient.UploadAsync(fileStream, new BlobHttpHeaders { ContentType = contentType }).ConfigureAwait(false);
 
-            if (await blobClient.ExistsAsync())
-            {
-                _logger.LogWarning("File {BlobPath} already exists.", blobPath);
-                throw new InvalidOperationException("File already exists!");
-            }
+        string fileUrl = blobClient.Uri.ToString();
+        string relativePath = $"{category}/{fileId}";
 
-            await blobClient.UploadAsync(fileStream, new BlobHttpHeaders { ContentType = contentType }).ConfigureAwait(false);
-            _logger.LogInformation("File uploaded successfully: {BlobPath}", blobPath);
+        _logger.LogInformation("File uploaded successfully: {FileUrl}, Relative Path: {RelativePath}", fileUrl, relativePath);
 
-            return (category, fileId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error uploading file. Tenant: {TenantId}, Company: {Company}, Category: {Category}, FileId: {FileId}", tenantId, company, category, fileId);
-            throw;
-        }
+        return (fileUrl, relativePath);
     }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error uploading file.");
+        throw;
+    }
+}
     public async Task<Stream> DownloadFileAsync(string blobName)
     {
         try

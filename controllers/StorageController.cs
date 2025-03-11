@@ -38,12 +38,13 @@ public class StorageController : ControllerBase
             _logger.LogInformation("Uploading file: {FileName} for Tenant: {TenantId}, Company: {Company}, Category: {Category}, FileId: {FileId}", 
                 file.FileName, tenantId, company, category, fileId);
 
-            var fileUrl = await _storageService.UploadFileAsync(
-                stream, tenantId, company, category, fileId, file.ContentType);
+            var (fileUrl, relativePath) = await _storageService.UploadFileAsync(
+            stream, tenantId, company, category, fileId, file.ContentType);
+
 
             _logger.LogInformation("File uploaded successfully: {FileUrl}", fileUrl);
 
-            return Ok(new { location = fileUrl });
+            return Ok(new { location = fileUrl, relativePath = relativePath });
         }
         catch (Exception ex)
         {
