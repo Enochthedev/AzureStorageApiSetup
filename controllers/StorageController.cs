@@ -98,4 +98,21 @@ public class StorageController : ControllerBase
             return StatusCode(500, new { error = "Internal server error", details = ex.Message });
         }
     }
+
+    [HttpGet("list")]
+public async Task<IActionResult> ListFiles()
+{
+    try
+    {
+        _logger.LogInformation("Listing all files in storage.");
+        var files = await _storageService.ListFilesAsync();
+
+        return Ok(files);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error retrieving file list.");
+        return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+    }
+}
 }

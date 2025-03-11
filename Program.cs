@@ -2,13 +2,17 @@ using Azure.Storage.Blobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add configuration for Azure Storage
+// Add services to the container.
+builder.Services.AddControllers(); // ✅ Register controllers
 builder.Services.Configure<AzureStorageConfig>(builder.Configuration.GetSection("AzureStorage"));
 
-// Register BlobServiceClient (REQUIRED)
+// Register BlobServiceClient
 builder.Services.AddSingleton(_ =>
 {
     var connectionString = builder.Configuration.GetValue<string>("AzureStorage:ConnectionString");
@@ -19,5 +23,10 @@ builder.Services.AddSingleton(_ =>
 builder.Services.AddScoped<AzureStorageService>();
 
 var app = builder.Build();
+
+// Enable routing and map controllers
+app.UseRouting();
+app.UseAuthorization(); // Optional, if needed for authentication
+app.MapControllers(); // ✅ This registers the API endpoints
 
 app.Run();

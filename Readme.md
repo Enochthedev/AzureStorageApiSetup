@@ -1,77 +1,133 @@
-# Azure Storage API Documentation
+### **1. Upload a File**
 
-## **Azure Storage Configuration (`AzureStorageConfig`)**
-
-This API now uses a **strongly-typed configuration model** called `AzureStorageConfig` to manage Azure Storage settings.
-
-### **AzureStorageConfig.cs**
-
-This class maps to settings stored in `appsettings.json`:
+To upload a file to Azure Blob Storage:
 
 ```csharp
-public class AzureStorageConfig
+[HttpPost("upload")]
+public async Task<IActionResult> UploadFile(IFormFile file, [FromServices] BlobServiceClient blobServiceClient)
 {
-    public string ConnectionString { get; set; }
-    public string ContainerName { get; set; }
+    var containerClient = blobServiceClient.GetBlobContainerClient("testcontainer");
+    var blobClient = containerClient.GetBlobClient(file.FileName);
+
+    using (var stream = file.OpenReadStream())
+    {
+        await blobClient.UploadAsync(stream, overwrite: true);
+    }
+
+    return Ok(new { FileName = file.FileName, Status = "Uploaded" });
 }
 ```
 
-### **Configuration in `appsettings.json`**
+#### **Request Format**
 
-Ensure your `appsettings.json` file contains the following:
+```http
+POST /upload
+Content-Type: multipart/form-data
 
-```json
-"AzureStorage": {
-  "ConnectionString": "UseDevelopmentStorage=true",
-  "ContainerName": "testcontainer"
-}
-```
-
-### **Production Configuration**
-
-Replace `"UseDevelopmentStorage=true"` with your **actual Azure Storage connection string** when deploying:
-
-```json
-"AzureStorage": {
-  "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=<your-storage-account>;AccountKey=<your-account-key>;EndpointSuffix=core.windows.net",
-  "ContainerName": "production-container"
-}
+Form Data:
+- file: (binary file)
 ```
 
 ---
 
-## **Codebase Updates**
+### **2. Download a File**
 
-- **Dependency Injection**: The API now registers `AzureStorageConfig` in `Program.cs`:
+To retrieve a file from Azure Blob Storage:
 
-  ```csharp
-  builder.Services.Configure<AzureStorageConfig>(builder.Configuration.GetSection("AzureStorage"));
-  ```
+```csharp
+[HttpGet("download/{fileName}")]
+public async Task<IActionResult> DownloadFile(string fileName, [FromServices] BlobServiceClient blobServiceClient)
+{
+    var containerClient = blobServiceClient.GetBlobContainerClient("testcontainer");
+    var blobClient = containerClient.GetBlobClient(fileName);
 
-- **`BlobServiceClient` is properly registered**:
+    if (await blobClient.ExistsAsync())
+    {
+        var stream = await blobClient.OpenReadAsync();
+        return File(stream, "application/octet-stream", fileName);
+    }
 
-  ```csharp
-  builder.Services.AddSingleton(_ =>
-  {
-      var config = builder.Configuration.GetSection("AzureStorage").Get<AzureStorageConfig>();
-      return new BlobServiceClient(config.ConnectionString);
-  });
-  ```
+    return NotFound("File not found");
+}
+```
+
+#### **Request Format**
+
+```http
+GET /download/{fileName}
+```
+
+#### **Response**
+
+- **200 OK**: Returns the requested file.
+- **404 Not Found**: If the file does not exist.
 
 ---
 
-## **Deployment Notes**
+### **3. Delete a File**
 
-1. **Ensure `AzureStorageConfig` is properly set up.**
-2. **Verify that `appsettings.json` contains correct storage settings.**
-3. **Run the application:**
+To delete a file from Azure Blob Storage:
 
-   ```sh
-   dotnet run
-   ```
+```csharp
+[HttpDelete("delete/{fileName}")]
+public async Task<IActionResult> DeleteFile(string fileName, [FromServices] BlobServiceClient blobServiceClient)
+{
+    var containerClient = blobServiceClient.GetBlobContainerClient("testcontainer");
+    var blobClient = containerClient.GetBlobClient(fileName);
 
-This ensures the **Azure Storage API** is properly configured and runs without dependency injection errors.
+    if (await blobClient.ExistsAsync())
+    {
+        await blobClient.DeleteAsync();
+        return Ok(new { FileName = fileName, Status = "Deleted" });
+    }
+
+    return NotFound("File not found");
+}
+```
+
+#### **Request Format**
+
+```http
+DELETE /delete/{fileName}
+```
+
+#### **Response**
+
+- **200 OK**: File successfully deleted.
+- **404 Not Found**: If the file does not exist.
 
 ---
 
-These updates improve configuration management, making it easier to switch between **development and production** environments seamlessly. 🚀
+### **4. List All Files in a Container**
+
+To list all files inside the configured Azure Storage container:
+
+```csharp
+[HttpGet("list")]
+public async Task<IActionResult> ListFiles([FromServices] BlobServiceClient blobServiceClient)
+{
+    var containerClient = blobServiceClient.GetBlobContainerClient("testcontainer");
+    var blobs = new List<string>();
+
+    await foreach (var blob in containerClient.GetBlobsAsync())
+    {
+        blobs.Add(blob.Name);
+    }
+
+    return Ok(blobs);
+}
+```
+
+#### **Request Format**
+
+```http
+GET /list
+```
+
+#### **Response**
+
+- **200 OK**: Returns a list of file names in the storage container.
+
+---
+
+These additions clarify how to **make API requests** and the **expected responses**. 🚀

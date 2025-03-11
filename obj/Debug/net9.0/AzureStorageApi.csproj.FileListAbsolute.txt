@@ -47,3 +47,4 @@
 /Users/user/Desktop/AzureStorageApi/obj/Debug/net9.0/AzureStorageApi.genruntimeconfig.cache
 /Users/user/Desktop/AzureStorageApi/obj/Debug/net9.0/ref/AzureStorageApi.dll
 /Users/user/Desktop/AzureStorageApi/obj/Debug/net9.0/AzureStorageApi.sourcelink.json
+/Users/user/Desktop/AzureStorageApi/bin/Debug/net9.0/appsettings.example.json

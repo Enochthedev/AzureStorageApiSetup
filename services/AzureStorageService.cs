@@ -20,10 +20,15 @@ public class AzureStorageService
     {
         try
         {
+            _logger.LogInformation("Starting file upload. Tenant: {TenantId}, Company: {Company}, Category: {Category}, FileId: {FileId}", tenantId, company, category, fileId);
+
             var blobContainerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
             await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+            _logger.LogInformation("Blob container {ContainerName} checked/created.", _containerName);
 
             string blobPath = $"{tenantId}/{company}/{category}/{fileId}";
+            _logger.LogInformation("Uploading file to Blob Path: {BlobPath}", blobPath);
+
             var blobClient = blobContainerClient.GetBlobClient(blobPath);
 
             if (await blobClient.ExistsAsync())
@@ -33,18 +38,16 @@ public class AzureStorageService
             }
 
             await blobClient.UploadAsync(fileStream, new BlobHttpHeaders { ContentType = contentType }).ConfigureAwait(false);
-            _logger.LogInformation("File uploaded successfully: Category: {Category}, FileId: {FileId}", category, fileId);
+            _logger.LogInformation("File uploaded successfully: {BlobPath}", blobPath);
 
             return (category, fileId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error uploading file.");
+            _logger.LogError(ex, "Error uploading file. Tenant: {TenantId}, Company: {Company}, Category: {Category}, FileId: {FileId}", tenantId, company, category, fileId);
             throw;
         }
     }
-
-
     public async Task<Stream> DownloadFileAsync(string blobName)
     {
         try
@@ -93,4 +96,17 @@ public class AzureStorageService
             throw;
         }
     }
+
+    public async Task<List<string>> ListFilesAsync()
+    {
+        var containerClient = _blobServiceClient.GetBlobContainerClient("your-container-name");
+        var blobs = new List<string>();
+
+        await foreach (var blob in containerClient.GetBlobsAsync())
+        {
+            blobs.Add(blob.Name);
+        }
+
+        return blobs;
+    }   
 }
