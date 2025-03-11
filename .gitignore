@@ -1,5 +1,6 @@
 # Build artifacts
 bin/
+bin
 obj/
 out/
 *.exe
