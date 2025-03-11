@@ -1,0 +1,51 @@
+# Build artifacts
+bin/
+obj/
+out/
+*.exe
+*.dll
+*.pdb
+*.nuget
+*.log
+*.nupkg
+*.snupkg
+
+# User-specific files
+.vscode/
+.idea/
+*.user
+*.suo
+*.vs/
+
+# Dependencies
+packages/
+node_modules/
+
+# .NET dependencies
+project.lock.json
+project.assets.json
+
+# Rider and Visual Studio Code settings
+*.code-workspace
+/.vs/
+
+# Configuration files
+appsettings.json
+appsettings.Developme
+
+# Logs
+*.log
+logs/
+logs/**/*.log
+
+# Local environments & temporary files
+.env
+*.tmp
+*.cache
+
+# macOS
+.DS_Store
+
+# JetBrains Rider
+.idea/
+*.iml
