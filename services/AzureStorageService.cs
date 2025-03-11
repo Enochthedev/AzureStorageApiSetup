@@ -1,52 +1,95 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
-public class AzureStorageService(IConfiguration configuration)
+public class AzureStorageService
 {
-#pragma warning disable CS8601 // Possible null reference assignment.
-    private readonly string _connectionString = configuration["AzureStorage:ConnectionString"];
-#pragma warning restore CS8601 // Possible null reference assignment.
-    private readonly string _containerName = configuration["AzureStorage:ContainerName"] ?? throw new ArgumentNullException("AzureStorage:ContainerName");
+    private readonly BlobServiceClient _blobServiceClient;
+    private readonly string _containerName;
+    private readonly ILogger<AzureStorageService> _logger;
+
+    public AzureStorageService(IConfiguration configuration, BlobServiceClient blobServiceClient, ILogger<AzureStorageService> logger)
+    {
+        _blobServiceClient = blobServiceClient;
+        _containerName = configuration["AzureStorage:ContainerName"] ?? throw new ArgumentNullException("AzureStorage:ContainerName");
+        _logger = logger;
+    }
 
     public async Task<string> UploadFileAsync(Stream fileStream, string tenantId, string company, string category, string fileId, string contentType)
     {
-    var blobServiceClient = new BlobServiceClient(_connectionString);
-    var blobContainerClient = blobServiceClient.GetBlobContainerClient(_containerName);
+        try
+        {
+            var blobContainerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+            await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.None);
 
-    // Ensure the container exists (without public access)
-    await blobContainerClient.CreateIfNotExistsAsync();
+            string blobPath = $"{tenantId}/{company}/{category}/{fileId}";
+            var blobClient = blobContainerClient.GetBlobClient(blobPath);
 
-    // Construct the full path in "folder" format
-    string blobPath = $"{tenantId}/{company}/{category}/{fileId}";
-    var blobClient = blobContainerClient.GetBlobClient(blobPath);
+            if (await blobClient.ExistsAsync())
+            {
+                _logger.LogWarning("File {BlobPath} already exists.", blobPath);
+                throw new InvalidOperationException("File already exists!");
+            }
 
-    // Check if the file already exists before uploading
-    if (await blobClient.ExistsAsync())
-    {
-        throw new Exception("File already exists!");
+            await blobClient.UploadAsync(fileStream, new BlobHttpHeaders { ContentType = contentType }).ConfigureAwait(false);
+            _logger.LogInformation("File uploaded successfully: {BlobPath}", blobPath);
+
+            return blobPath;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading file.");
+            throw;
+        }
     }
 
-    // Upload the file
-    await blobClient.UploadAsync(fileStream, new BlobHttpHeaders { ContentType = contentType });
-
-    return blobPath; // Return the relative path instead of the full URL
-    }   
     public async Task<Stream> DownloadFileAsync(string blobName)
     {
-        var blobServiceClient = new BlobServiceClient(_connectionString);
-        var blobContainerClient = blobServiceClient.GetBlobContainerClient(_containerName);
-        var blobClient = blobContainerClient.GetBlobClient(blobName);
+        try
+        {
+            var blobContainerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+            var blobClient = blobContainerClient.GetBlobClient(blobName);
 
-        var download = await blobClient.DownloadContentAsync();
-        return download.Value.Content.ToStream();
+            if (!await blobClient.ExistsAsync().ConfigureAwait(false))
+            {
+                _logger.LogWarning("File {BlobName} not found.", blobName);
+                throw new FileNotFoundException("File not found.");
+            }
+
+            var download = await blobClient.DownloadContentAsync().ConfigureAwait(false);
+            _logger.LogInformation("File downloaded successfully: {BlobName}", blobName);
+
+            return download.Value.Content.ToStream();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error downloading file.");
+            throw;
+        }
     }
 
     public async Task DeleteFileAsync(string blobName)
     {
-        var blobServiceClient = new BlobServiceClient(_connectionString);
-        var blobContainerClient = blobServiceClient.GetBlobContainerClient(_containerName);
-        var blobClient = blobContainerClient.GetBlobClient(blobName);
-        await blobClient.DeleteIfExistsAsync();
+        try
+        {
+            var blobContainerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+            var blobClient = blobContainerClient.GetBlobClient(blobName);
+
+            bool deleted = await blobClient.DeleteIfExistsAsync().ConfigureAwait(false);
+            if (deleted)
+            {
+                _logger.LogInformation("File deleted successfully: {BlobName}", blobName);
+            }
+            else
+            {
+                _logger.LogWarning("File {BlobName} not found for deletion.", blobName);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting file.");
+            throw;
+        }
     }
 }
