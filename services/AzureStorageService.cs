@@ -38,6 +38,7 @@ public async Task<(string fileUrl, string relativePath)> UploadFileAsync(Stream 
         _logger.LogInformation("File uploaded successfully: {FileUrl}, Relative Path: {RelativePath}", fileUrl, relativePath);
 
         return (fileUrl, relativePath);
+        //save to mssquery for user query create a transation to reverse the upload if the user query is not created
     }
     catch (Exception ex)
     {

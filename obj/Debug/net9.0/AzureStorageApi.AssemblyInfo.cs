@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("AzureStorageApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2efb6f0955104fdbcef7e19db33f9bbd912c9d5d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2bc631cb0171abe319eb279f96cae9d389080f14")]
 [assembly: System.Reflection.AssemblyProductAttribute("AzureStorageApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("AzureStorageApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
