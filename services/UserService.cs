@@ -61,11 +61,53 @@ namespace AzureStorageApi.Services
     }
     
     
-    public async Task<User> CreateUserAsync(User user)
+    public async Task<User> CreateUserAsync(User user, Stream? profilePictureStream = null, string? profilePictureFileName = null)
     {
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync();
-        return user;
+        string? uploadedFileUrl = null;
+        string? fileId = null;
+
+        if (profilePictureStream != null && !string.IsNullOrEmpty(profilePictureFileName))
+        {
+            try
+            {
+                string company = "YourCompany"; // Replace with actual company value
+                fileId = $"{user.Id}/{profilePictureFileName}";
+                var (fileUrl, relativePath) = await _azureStorageService.UploadFileAsync(profilePictureStream, fileId, company, string.Empty, string.Empty, string.Empty);
+                uploadedFileUrl = fileUrl;
+                user.ProfilePictureUrl = uploadedFileUrl;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading profile picture during user creation.");
+                throw;
+            }
+        }
+
+        try
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return user;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating user. Reverting uploaded profile picture if applicable.");
+
+            if (!string.IsNullOrEmpty(uploadedFileUrl) && !string.IsNullOrEmpty(fileId))
+            {
+                try
+                {
+                    await _azureStorageService.DeleteFileAsync(fileId);
+                    _logger.LogInformation("Reverted uploaded profile picture: {FileId}", fileId);
+                }
+                catch (Exception deleteEx)
+                {
+                    _logger.LogError(deleteEx, "Error reverting uploaded profile picture.");
+                }
+            }
+
+            throw;
+        }
     }
 
     public async Task<bool> DeleteUserAsync(Guid id)
