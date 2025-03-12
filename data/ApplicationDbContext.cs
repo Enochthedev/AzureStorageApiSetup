@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.SqlServer;
 using AzureStorageApi.Models; // Replace 'YourNamespace.Models' with the actual namespace where the User class is defined
 public class User
 {
-    internal string ProfilePictureUrl;
+    internal string ProfilePictureUrl = string.Empty;
 
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
